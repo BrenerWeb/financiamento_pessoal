@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle Financeiro</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #f4f4f4;
+            font-family: 'Poppins', sans-serif;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .resume {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .card {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            flex: 1;
+        }
+        input, select, button {
+            margin: 10px 0;
+            padding: 10px;
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            text-align: center; /* Centraliza o texto nas células */
+        }
+        .chart-container {
+            margin-top: 30px;
+            max-width: 400px; /* Ajuste o tamanho máximo do gráfico */
+            margin-left: auto; /* Centraliza o gráfico */
+            margin-right: auto; /* Centraliza o gráfico */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="resume">
+            <div class="card">
+                <h2>Entradas</h2>
+                <span id="incomes">R$ 0.00</span><br>
+                <span id="incomesDollar">$ 0.00</span> <!-- Valor em Dólar -->
+            </div>
+            <div class="card">
+                <h2>Saídas</h2>
+                <span id="expenses">R$ 0.00</span><br>
+                <span id="expensesDollar">$ 0.00</span> <!-- Valor em Dólar -->
+            </div>
+            <div class="card">
+                <h2>Total</h2>
+                <span id="total">R$ 0.00</span><br>
+                <span id="totalDollar">$ 0.00</span> <!-- Valor em Dólar -->
+            </div>
+            <div class="card">
+                <h2>Cotação do Dólar</h2>
+                <span id="dollar">Carregando...</span>
+            </div>
+        </div>
+        <div>
+            <input type="text" id="desc" placeholder="Descrição">
+            <input type="number" id="amount" placeholder="Valor (R$)">
+            <select id="type">
+                <option value="entrada">Entrada</option>
+                <option value="saida">Saída</option>
+            </select>
+            <button id="addBtn">Adicionar</button>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Descrição</th>
+                    <th>Valor (R$)</th>
+                    <th>Tipo</th>
+                    <th>Ação</th>
+                </tr>
+            </thead>
+            <tbody id="transactions"></tbody>
+        </table>
+        <div class="chart-container">
+            <canvas id="myChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const incomesEl = document.getElementById('incomes');
+        const expensesEl = document.getElementById('expenses');
+        const totalEl = document.getElementById('total');
+        const transactionsEl = document.getElementById('transactions');
+        const chartEl = document.getElementById('myChart');
+        const dollarEl = document.getElementById('dollar');
+        const incomesDollarEl = document.getElementById('incomesDollar');
+        const expensesDollarEl = document.getElementById('expensesDollar');
+        const totalDollarEl = document.getElementById('totalDollar');
+        let incomes = 0, expenses = 0, chartInstance = null;
+        let dollarRate = 0; // Variável para armazenar a cotação do dólar
+
+        // Atualiza o resumo
+        function updateSummary() {
+            incomesEl.textContent = `R$ ${incomes.toFixed(2)}`;
+            expensesEl.textContent = `R$ ${expenses.toFixed(2)}`;
+            totalEl.textContent = `R$ ${(incomes - expenses).toFixed(2)}`;
+            
+            // Atualiza os valores em dólar
+            incomesDollarEl.textContent = `$ ${(incomes / dollarRate).toFixed(2)}`;
+            expensesDollarEl.textContent = `$ ${(expenses / dollarRate).toFixed(2)}`;
+            totalDollarEl.textContent = `$ ${((incomes - expenses) / dollarRate).toFixed(2)}`;
+        }
+
+        // Adiciona uma transação
+        function addTransaction(desc, amount, type) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${desc}</td>
+                <td>R$ ${amount.toFixed(2)}</td>
+                <td>${type}</td>
+                <td><button class="deleteBtn">🗑️</button></td>`;
+            transactionsEl.appendChild(row);
+            type === 'entrada' ? incomes += amount : expenses += amount;
+            updateSummary();
+            updateChart();
+        }
+
+        // Atualiza o gráfico
+        function updateChart() {
+            if (chartInstance) chartInstance.destroy(); // Evita sobreposição de gráficos
+
+            chartInstance = new Chart(chartEl, {
+                type: 'pie',
+                data: {
+                    labels: ['Entradas', 'Saídas'],
+                    datasets: [{
+                        data: [incomes, expenses],
+                        backgroundColor: ['#4caf50', '#f44336']
+                    }]
+                }
+            });
+        }
+
+        // Evento de clique no botão adicionar
+        document.getElementById('addBtn').addEventListener('click', () => {
+            const desc = document.getElementById('desc').value.trim();
+            const amount = parseFloat(document.getElementById('amount').value);
+            const type = document.getElementById('type').value;
+
+            if (!desc || isNaN(amount) || amount <= 0) {
+                alert('Preencha todos os campos corretamente!');
+                return;
+            }
+
+            addTransaction(desc, amount, type);
+            document.getElementById('desc').value = '';
+            document.getElementById('amount').value = '';
+        });
+
+        // Evento para deletar transações
+        transactionsEl.addEventListener('click', (event) => {
+            if (event.target.classList.contains('deleteBtn')) {
+                const row = event.target.parentElement.parentElement;
+                const amount = parseFloat(row.children[1].textContent.replace('R$', ''));
+                const type = row.children[2].textContent;
+
+                type === 'entrada' ? incomes -= amount : expenses -= amount;
+                row.remove();
+                updateSummary();
+                updateChart();
+            }
+        });
+
+        // Função para buscar a cotação do dólar
+        async function fetchDollarRate() {
+            try {
+                const response = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL');
+                if (!response.ok) throw new Error('Erro na resposta da API');
+                
+                const data = await response.json();
+                dollarRate = parseFloat(data['USDBRL'].bid);
+                dollarEl.textContent = `R$ ${dollarRate.toFixed(2)}`;
+                updateSummary(); // Atualiza o resumo após pegar a cotação
+            } catch (error) {
+                dollarEl.textContent = 'Erro ao carregar';
+                console.error('Erro ao buscar a cotação do dólar:', error);
+            }
+        }
+
+        // Chamada inicial das funções
+        updateSummary();
+        updateChart();
+        fetchDollarRate();
+    </script>
+</body>
+</html>
